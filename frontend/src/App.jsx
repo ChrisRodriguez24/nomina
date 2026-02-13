@@ -35,6 +35,7 @@ const styles = {
   reqBox: "bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 text-sm text-blue-800 rounded-r-lg",
   tabActive: "bg-alo-orange text-white shadow-lg transform scale-105 ring-2 ring-orange-200",
   tabInactive: "bg-white text-gray-500 hover:bg-gray-50 border border-gray-200",
+  fileBtnSmall: "border-2 border-dashed border-blue-200 rounded-xl p-3 flex flex-col items-center justify-center text-center hover:bg-blue-50 hover:border-blue-400 cursor-pointer transition-all relative group/file",
   suggestionBox: "absolute z-50 w-full bg-white shadow-xl max-h-60 overflow-y-auto rounded-lg border border-gray-200 mt-1 left-0",
   suggestionItem: "p-3 hover:bg-orange-50 cursor-pointer text-xs border-b border-gray-100 flex flex-col",
   statsCard: "bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-all",
@@ -522,7 +523,10 @@ function App() {
                     <p className="font-bold text-sm mt-2">Bonificación No Salarial</p>
                     {novedad.concepto === 'BONO' && (
                       <div className="absolute inset-0 bg-black/5 flex items-center justify-center backdrop-blur-[1px]">
-                        <input autoFocus type="number" className="w-24 text-center font-bold text-lg outline-none border-b-2 border-green-500 bg-white shadow-lg rounded-lg p-2" placeholder="$ Valor" value={novedad.valor} onChange={e => setNovedad({ ...novedad, valor: e.target.value })} onClick={(e) => e.stopPropagation()} />
+                        <div className="bg-white shadow-xl rounded-xl p-2 flex items-center border-2 border-green-500 animate-bounce-in">
+                          <span className="text-green-600 font-bold ml-2">$</span>
+                          <input autoFocus type="number" className="w-32 text-right font-bold text-lg outline-none bg-transparent px-2" placeholder="0" value={novedad.valor} onChange={e => setNovedad({ ...novedad, valor: e.target.value })} onClick={(e) => e.stopPropagation()} />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -531,7 +535,10 @@ function App() {
                     <p className="font-bold text-sm mt-2">Comisión</p>
                     {novedad.concepto === 'COMISION' && (
                       <div className="absolute inset-0 bg-black/5 flex items-center justify-center backdrop-blur-[1px]">
-                        <input autoFocus type="number" className="w-24 text-center font-bold text-lg outline-none border-b-2 border-emerald-500 bg-white shadow-lg rounded-lg p-2" placeholder="$ Valor" value={novedad.valor} onChange={e => setNovedad({ ...novedad, valor: e.target.value })} onClick={(e) => e.stopPropagation()} />
+                        <div className="bg-white shadow-xl rounded-xl p-2 flex items-center border-2 border-emerald-500 animate-bounce-in">
+                          <span className="text-emerald-600 font-bold ml-2">$</span>
+                          <input autoFocus type="number" className="w-32 text-right font-bold text-lg outline-none bg-transparent px-2" placeholder="0" value={novedad.valor} onChange={e => setNovedad({ ...novedad, valor: e.target.value })} onClick={(e) => e.stopPropagation()} />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -555,16 +562,45 @@ function App() {
                         </button>
 
                         {isActive && (
-                          <div className="absolute top-12 left-0 z-50 bg-white p-4 shadow-2xl rounded-2xl border border-gray-100 w-64 animate-bounce-in">
-                            <div className="space-y-3">
+                          <div className="absolute top-12 left-0 z-50 bg-white p-5 shadow-2xl rounded-2xl border border-gray-100 w-80 animate-bounce-in text-left">
+                            <div className="space-y-4">
                               <div>
-                                <label className="text-[10px] font-bold text-gray-400 uppercase">Días</label>
-                                <input autoFocus type="number" className="w-full border-b-2 border-blue-500 p-1 font-bold outline-none" placeholder="Cant. Días" value={novedad.cantidad} onChange={e => setNovedad({ ...novedad, cantidad: e.target.value })} />
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Días de Ausencia</label>
+                                <input autoFocus type="number" className="w-full border-b-2 border-blue-500 p-2 font-bold text-lg outline-none bg-blue-50/30 rounded-t-lg transition-all focus:bg-blue-50" placeholder="0" value={novedad.cantidad} onChange={e => setNovedad({ ...novedad, cantidad: e.target.value })} />
                               </div>
-                              <div>
-                                <label className="text-[10px] font-bold text-gray-400 uppercase">Soportes (Opcional)</label>
-                                <input type="file" accept=".pdf" className="text-[10px] w-full" onChange={e => setNovedad({ ...novedad, files: { ...novedad.files, soporte: e.target.files[0] } })} />
-                                {novedad.files?.soporte && <span className="text-[9px] text-green-600">Archivo cargado</span>}
+
+                              <div className="pt-2">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Soporte Obligatorio</label>
+                                {code === 'LICENCIA_LUTO' ? (
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <label className={styles.fileBtnSmall}>
+                                      <Upload size={16} className="mb-1 text-blue-400 group-hover/file:text-blue-600 transition-colors" />
+                                      <span className="text-[9px] font-bold uppercase">Acta Def.</span>
+                                      <input type="file" accept=".pdf" className="hidden" onChange={e => setNovedad({ ...novedad, files: { ...novedad.files, acta: e.target.files[0] } })} />
+                                      {novedad.files?.acta && <CheckCircle size={12} className="absolute top-1 right-1 text-green-500" />}
+                                    </label>
+                                    <label className={styles.fileBtnSmall}>
+                                      <Upload size={16} className="mb-1 text-blue-400 group-hover/file:text-blue-600 transition-colors" />
+                                      <span className="text-[9px] font-bold uppercase">Reg. Civil</span>
+                                      <input type="file" accept=".pdf" className="hidden" onChange={e => setNovedad({ ...novedad, files: { ...novedad.files, registro: e.target.files[0] } })} />
+                                      {novedad.files?.registro && <CheckCircle size={12} className="absolute top-1 right-1 text-green-500" />}
+                                    </label>
+                                  </div>
+                                ) : (
+                                  <label className={styles.fileBtnSmall}>
+                                    <Upload size={20} className="mb-1 text-blue-400 group-hover/file:text-blue-600 transition-colors" />
+                                    <span className="text-[10px] font-bold uppercase">Cargar Soporte PDF</span>
+                                    <span className="text-[8px] text-gray-400 italic">
+                                      {code === 'CALAMIDAD_DOMESTICA' && 'Pruebas de la calamidad'}
+                                      {code === 'DIA_FAMILIA' && 'Certificado asistencia'}
+                                      {code === 'PERMISO_REMUNERADO' && 'Autorización jefe'}
+                                      {code === 'VACACIONES' && 'Formato vacaciones'}
+                                      {code === 'LICENCIA_NO_REMUNERADA' && 'Solicitud escrita'}
+                                    </span>
+                                    <input type="file" accept=".pdf" className="hidden" onChange={e => setNovedad({ ...novedad, files: { ...novedad.files, soporte: e.target.files[0] } })} />
+                                    {novedad.files?.soporte && <CheckCircle size={14} className="absolute top-1 right-1 text-green-500" />}
+                                  </label>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -617,7 +653,7 @@ function App() {
                           {item.isAusentismo ? (
                             <span className="text-blue-600 font-bold">{item.fecha} | {item.cantidad} Días {item.files ? '(+Soportes)' : ''}</span>
                           ) : (
-                            <span>{item.unidad === 'HORAS' ? `${item.cantidad} Hrs` : `$${Number(item.valor).toLocaleString()}`}</span>
+                            <span>{item.unidad === 'HORAS' ? `${item.cantidad} Hrs` : `$${Math.round(item.valor).toLocaleString('es-CO')}`}</span>
                           )}
                         </p>
                       </div>
