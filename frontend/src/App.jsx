@@ -13,14 +13,14 @@ const ADMIN_EMAILS = ["crodriguezm@alocredit.co", "direccion.administrativa@aloc
 
 // CONCEPTOS VISUALES MEJORADOS
 const VISUAL_CONCEPTOS = {
-  'RN': { icon: <Moon className="text-blue-600" size={24} />, bg: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200', title: 'text-blue-900', pct: 'bg-blue-200 text-blue-800' },
-  'HED': { icon: <Sun className="text-yellow-600" size={24} />, bg: 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200', title: 'text-yellow-900', pct: 'bg-yellow-200 text-yellow-800' },
-  'HEN': { icon: <Moon className="text-indigo-600" size={24} />, bg: 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200', title: 'text-indigo-900', pct: 'bg-indigo-200 text-indigo-800' },
-  'FSC': { icon: <Calendar className="text-orange-600" size={24} />, bg: 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200', title: 'text-orange-900', pct: 'bg-orange-200 text-orange-800' },
-  'FCC': { icon: <Calendar className="text-emerald-600" size={24} />, bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200', title: 'text-emerald-900', pct: 'bg-emerald-200 text-emerald-800' },
-  'RNF': { icon: <Moon className="text-purple-600" size={24} />, bg: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200', title: 'text-purple-900', pct: 'bg-purple-200 text-purple-800' },
-  'FD': { icon: <Sun className="text-red-600" size={24} />, bg: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200', title: 'text-red-900', pct: 'bg-red-200 text-red-800' },
-  'FN': { icon: <Moon className="text-rose-600" size={24} />, bg: 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200', title: 'text-rose-900', pct: 'bg-rose-200 text-rose-800' }
+  'RN': { icon: <Moon className="text-blue-600 drop-shadow-sm" size={24} />, bg: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-blue-100', title: 'text-blue-900', pct: 'bg-blue-200 text-blue-800' },
+  'HED': { icon: <Sun className="text-yellow-600 drop-shadow-sm" size={24} />, bg: 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 hover:shadow-yellow-100', title: 'text-yellow-900', pct: 'bg-yellow-200 text-yellow-800' },
+  'HEN': { icon: <Moon className="text-indigo-600 drop-shadow-sm" size={24} />, bg: 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-indigo-100', title: 'text-indigo-900', pct: 'bg-indigo-200 text-indigo-800' },
+  'FSC': { icon: <Calendar className="text-orange-600 drop-shadow-sm" size={24} />, bg: 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 hover:shadow-orange-100', title: 'text-orange-900', pct: 'bg-orange-200 text-orange-800' },
+  'FCC': { icon: <Calendar className="text-emerald-600 drop-shadow-sm" size={24} />, bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-emerald-100', title: 'text-emerald-900', pct: 'bg-emerald-200 text-emerald-800' },
+  'RNF': { icon: <Moon className="text-purple-600 drop-shadow-sm" size={24} />, bg: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-purple-100', title: 'text-purple-900', pct: 'bg-purple-200 text-purple-800' },
+  'FD': { icon: <Sun className="text-red-600 drop-shadow-sm" size={24} />, bg: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-red-100', title: 'text-red-900', pct: 'bg-red-200 text-red-800' },
+  'FN': { icon: <Moon className="text-rose-600 drop-shadow-sm" size={24} />, bg: 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200 hover:shadow-rose-100', title: 'text-rose-900', pct: 'bg-rose-200 text-rose-800' }
 };
 
 const LEGAL_TEXT = "Autorizo de manera voluntaria, previa explícita e informada a Alo Credit Colombia SAS para tratar mis datos personales de acuerdo con la política de Tratamiento de Datos personales para los fines relacionados con su objeto y en especial para fines legales, contractuales y misionales. Así mismo acepto la política de incapacidades vigente por la compañía. (Ver política)";
@@ -47,7 +47,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 
 function App() {
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('RECARGOS');
+  const [activeTab, setActiveTab] = useState('NOVEDADES');
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -410,7 +410,7 @@ function App() {
                         <button className="flex items-center gap-2 text-blue-600 font-bold text-xs hover:text-blue-800 transition-colors">
                           <HelpCircle size={14} /> Conceptos Válidos
                         </button>
-                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-64 bg-white shadow-2xl rounded-xl p-4 border border-gray-100 hidden group-hover:block z-50 animate-fade-in pointer-events-none">
+                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-64 bg-white shadow-2xl rounded-xl p-4 border border-gray-100 hidden group-hover:block z-[100] animate-fade-in pointer-events-auto">
                           <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase">Recargos (Usar estos códigos):</p>
                           <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                             {configDB.map(c => <div key={c.codigo} className="text-[10px]"><span className="font-bold text-blue-900">{c.codigo}:</span> {c.porcentaje}%</div>)}
