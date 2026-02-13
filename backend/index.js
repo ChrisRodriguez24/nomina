@@ -11,6 +11,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const FOLDER_MAPPING = {
+    'GENERAL': 'Incapacidades Médicas',
+    'LICENCIA_LUTO': 'Licencias de Luto',
+    'CALAMIDAD_DOMESTICA': 'Calamidades Domésticas',
+    'LICENCIA_NO_REMUNERADA': 'Licencias No Remuneradas',
+    'DIA_FAMILIA': 'Días de la Familia',
+    'PERMISO_REMUNERADO': 'Permisos Remunerados',
+    'VACACIONES': 'Vacaciones',
+    'MATERNIDAD': 'Licencia Maternidad',
+    'PATERNIDAD': 'Licencia Paternidad',
+    'LABORAL': 'Accidentes Laborales',
+    'TRANSITO': 'Accidentes de Tránsito'
+};
+
 // CONFIGURACIÓN MULTER (ARCHIVOS)
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -47,9 +61,15 @@ app.put('/api/config', async (req, res) => {
 // 2. EMPLEADO
 app.get('/api/empleados/:cedula', async (req, res) => {
     try {
-        const q = `SELECT p.nombre_completo, p.documento, c.id as contrato_id, c.salario FROM personas p JOIN contratos c ON c.persona_id = p.id WHERE p.documento = $1 AND c.estado = 'ACTIVO' LIMIT 1`;
-        const r = await pool.query(q, [req.params.cedula]);
-        if (r.rows.length > 0) res.json(r.rows[0]); else res.status(404).json({ message: "No encontrado" });
+        const { cedula } = req.params;
+        const result = await pool.query(`
+            SELECT p.nombre_completo, c.id as contrato_id, c.salario 
+            FROM personas p 
+            JOIN contratos c ON c.persona_id = p.id 
+            WHERE p.documento = $1 AND c.estado = 'ACTIVO'
+        `, [cedula]);
+        if (result.rows.length > 0) res.json(result.rows[0]);
+        else res.status(404).json({ error: 'Empleado no encontrado' });
     } catch (e) { res.status(500).json(e); }
 });
 
@@ -78,6 +98,9 @@ app.post('/api/radicar', upload.any(), async (req, res) => {
         const year = d.getFullYear();
         const dateStr = `${day}${month}${year}`;
 
+        // Friendly folder name
+        const friendlyTipo = FOLDER_MAPPING[tipo] || tipo;
+
         const archivos = {};
 
         // 3. Subir archivos a Google Drive con estructura solicitada
@@ -86,7 +109,7 @@ app.post('/api/radicar', upload.any(), async (req, res) => {
             const driveFile = await uploadFileToDrive({
                 filePath: f.path,
                 fileName: driveName,
-                folders: [tipo, nombreEmpleado, dateStr]
+                folders: [friendlyTipo, nombreEmpleado, dateStr]
             });
             archivos[f.fieldname] = driveFile.id;
 

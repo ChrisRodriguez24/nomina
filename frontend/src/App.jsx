@@ -410,7 +410,7 @@ function App() {
                         <button className="flex items-center gap-2 text-blue-600 font-bold text-xs hover:text-blue-800 transition-colors">
                           <HelpCircle size={14} /> Conceptos Válidos
                         </button>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-80 mb-4 bg-white shadow-2xl rounded-2xl p-5 border border-gray-100 hidden group-hover:block z-[9999] animate-fade-in pointer-events-auto">
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-80 mt-4 bg-white shadow-2xl rounded-2xl p-5 border border-gray-100 hidden group-hover:block z-[9999] animate-fade-in pointer-events-auto">
                           <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase">Recargos (Usar estos códigos):</p>
                           <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                             {configDB.map(c => <div key={c.codigo} className="text-[10px]"><span className="font-bold text-blue-900">{c.codigo}:</span> {c.porcentaje}%</div>)}
