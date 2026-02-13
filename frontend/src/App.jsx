@@ -26,7 +26,7 @@ const VISUAL_CONCEPTOS = {
 const LEGAL_TEXT = "Autorizo de manera voluntaria, previa explícita e informada a Alo Credit Colombia SAS para tratar mis datos personales de acuerdo con la política de Tratamiento de Datos personales para los fines relacionados con su objeto y en especial para fines legales, contractuales y misionales. Así mismo acepto la política de incapacidades vigente por la compañía. (Ver política)";
 
 const styles = {
-  glass: "bg-white/95 backdrop-blur-xl border border-white/60 shadow-xl rounded-3xl overflow-hidden animate-fade-in",
+  glass: "bg-white/95 backdrop-blur-xl border border-white/60 shadow-xl rounded-3xl animate-fade-in",
   input: "w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-alo-orange text-sm transition-all focus:bg-white font-medium",
   label: "block text-xs font-bold text-gray-500 uppercase mb-1 ml-1",
   cardSelect: "border rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 relative overflow-hidden h-32 flex flex-col justify-between shadow-sm hover:shadow-md",
@@ -410,7 +410,7 @@ function App() {
                         <button className="flex items-center gap-2 text-blue-600 font-bold text-xs hover:text-blue-800 transition-colors">
                           <HelpCircle size={14} /> Conceptos Válidos
                         </button>
-                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-64 bg-white shadow-2xl rounded-xl p-4 border border-gray-100 hidden group-hover:block z-[100] animate-fade-in pointer-events-auto">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-80 mb-4 bg-white shadow-2xl rounded-2xl p-5 border border-gray-100 hidden group-hover:block z-[9999] animate-fade-in pointer-events-auto">
                           <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase">Recargos (Usar estos códigos):</p>
                           <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                             {configDB.map(c => <div key={c.codigo} className="text-[10px]"><span className="font-bold text-blue-900">{c.codigo}:</span> {c.porcentaje}%</div>)}
@@ -423,6 +423,8 @@ function App() {
                             <div>CALAMIDAD_DOMESTICA</div>
                             <div>LICENCIA_NO_REMUNERADA</div>
                             <div>DIA_FAMILIA</div>
+                            <div>PERMISO_REMUNERADO</div>
+                            <div>VACACIONES</div>
                           </div>
                           <div className="mt-3 pt-2 border-t text-[9px] text-gray-400 italic">
                             * El sistema calculará el valor automáticamente si deja la columna "Valor" en 0.
@@ -442,7 +444,7 @@ function App() {
                     const visual = VISUAL_CONCEPTOS[c.codigo] || { icon: <Sun size={24} />, bg: 'bg-gray-50', title: 'text-gray-800', pct: 'bg-gray-200' };
                     const isActive = novedad.concepto === c.codigo;
                     return (
-                      <div key={c.codigo} onClick={() => setNovedad({ ...novedad, concepto: c.codigo, unidad: 'HORAS', isAusentismo: false })} className={`${styles.cardSelect} ${visual.bg} ${isActive ? styles.cardSelectActive : 'border-transparent'}`}>
+                      <div key={c.codigo} onClick={() => setNovedad({ ...novedad, concepto: c.codigo, unidad: 'HORAS', isAusentismo: false, files: null })} className={`${styles.cardSelect} ${visual.bg} ${isActive ? styles.cardSelectActive : 'border-transparent'}`}>
                         <div className="flex justify-between items-start">
                           <div className={`p-2 rounded-xl bg-white/60 backdrop-blur-sm shadow-sm`}>{visual.icon}</div>
                           <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${visual.pct}`}>{c.porcentaje}%</span>
@@ -469,7 +471,7 @@ function App() {
               <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
                 <h4 className="text-sm font-bold text-gray-500 uppercase mb-4 flex items-center gap-2"><DollarSign size={16} /> 2. Bonificaciones & Comisiones</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  <div onClick={() => setNovedad({ ...novedad, concepto: 'BONO', unidad: 'DINERO', isAusentismo: false })} className={`${styles.cardSelect} bg-gradient-to-br from-green-50 to-green-100 border-green-200 text-green-900 ${novedad.concepto === 'BONO' ? styles.cardSelectActive : ''}`}>
+                  <div onClick={() => setNovedad({ ...novedad, concepto: 'BONO', unidad: 'DINERO', isAusentismo: false, files: null })} className={`${styles.cardSelect} bg-gradient-to-br from-green-50 to-green-100 border-green-200 text-green-900 ${novedad.concepto === 'BONO' ? styles.cardSelectActive : ''}`}>
                     <div className="flex justify-between"><div className="p-2 bg-white/60 rounded-xl"><Banknote className="text-green-600" size={24} /></div><span className="text-[10px] font-bold bg-green-200 text-green-800 px-2 py-1 rounded-full">$</span></div>
                     <p className="font-bold text-sm mt-2">Bonificación No Salarial</p>
                     {novedad.concepto === 'BONO' && (
@@ -478,7 +480,7 @@ function App() {
                       </div>
                     )}
                   </div>
-                  <div onClick={() => setNovedad({ ...novedad, concepto: 'COMISION', unidad: 'DINERO', isAusentismo: false })} className={`${styles.cardSelect} bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-900 ${novedad.concepto === 'COMISION' ? styles.cardSelectActive : ''}`}>
+                  <div onClick={() => setNovedad({ ...novedad, concepto: 'COMISION', unidad: 'DINERO', isAusentismo: false, files: null })} className={`${styles.cardSelect} bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-900 ${novedad.concepto === 'COMISION' ? styles.cardSelectActive : ''}`}>
                     <div className="flex justify-between"><div className="p-2 bg-white/60 rounded-xl"><DollarSign className="text-emerald-600" size={24} /></div><span className="text-[10px] font-bold bg-emerald-200 text-emerald-800 px-2 py-1 rounded-full">%</span></div>
                     <p className="font-bold text-sm mt-2">Comisión</p>
                     {novedad.concepto === 'COMISION' && (
@@ -490,48 +492,45 @@ function App() {
                 </div>
               </div>
 
-              {/* SEGMENT 3: AUSENTISMOS */}
+              {/* SEGMENT 3: AUSENTISMOS & PERMISOS */}
               <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
-                <h4 className="text-sm font-bold text-gray-500 uppercase mb-4 flex items-center gap-2"><Briefcase size={16} /> 3. Reporte de Ausentismo & Permisos</h4>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div>
-                    <label className={styles.label}>Tipo de Ausencia</label>
-                    <select className={styles.input} value={novedad.isAusentismo ? novedad.concepto : ''} onChange={e => setNovedad({ ...novedad, concepto: e.target.value, isAusentismo: true, unidad: 'DIAS', cantidad: '', files: null })}>
-                      <option value="">Seleccione...</option>
-                      <option value="LICENCIA_LUTO">Licencia por Luto</option>
-                      <option value="CALAMIDAD_DOMESTICA">Calamidad Doméstica</option>
-                      <option value="LICENCIA_NO_REMUNERADA">Licencia No Remunerada</option>
-                      <option value="DIA_FAMILIA">Día de la Familia</option>
-                    </select>
-                  </div>
-                  {novedad.isAusentismo && (
-                    <>
-                      <div>
-                        <label className={styles.label}>Fecha Inicio</label>
-                        <input type="date" className={styles.input} value={novedad.fecha} onChange={e => setNovedad({ ...novedad, fecha: e.target.value })} />
-                      </div>
-                      <div>
-                        <label className={styles.label}>Días de Ausencia</label>
-                        <input type="number" className={styles.input} placeholder="Días..." value={novedad.cantidad} onChange={e => setNovedad({ ...novedad, cantidad: e.target.value })} />
-                      </div>
-                    </>
-                  )}
-                </div>
+                <h4 className="text-sm font-bold text-gray-500 uppercase mb-4 flex items-center gap-2"><Briefcase size={16} /> 3. Ausentismos & Permisos</h4>
+                <div className="flex flex-wrap gap-3">
+                  {['LICENCIA LUTO', 'CALAMIDAD DOMESTICA', 'LICENCIA NO REMUNERADA', 'DIA FAMILIA', 'PERMISO REMUNERADO', 'VACACIONES'].map(a => {
+                    const code = a.replace(/ /g, '_');
+                    const isActive = novedad.concepto === code;
+                    return (
+                      <div key={code} className="relative group">
+                        <button
+                          onClick={() => setNovedad({ ...novedad, concepto: code, unidad: 'DIAS', isAusentismo: true, cantidad: '', valor: '', files: null })}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 ${isActive ? 'bg-blue-900 text-white border-blue-900 shadow-lg' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'}`}
+                        >
+                          {isActive ? <CheckCircle size={14} /> : <Plus size={14} />} {a}
+                        </button>
 
-                {novedad.isAusentismo && novedad.concepto && (
-                  <div className="mt-4 animate-fade-in p-4 bg-white rounded-xl border border-dashed border-gray-300">
-                    {novedad.concepto === 'LICENCIA_LUTO' && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <label className={styles.fileBtn}><Upload className="mb-2 text-gray-400" /><span className="text-xs font-bold">Cert. Defunción</span><input type="file" accept=".pdf" className="hidden" onChange={(e) => setNovedad({ ...novedad, files: { ...novedad.files, cert_defuncion: e.target.files[0] } })} />{novedad.files?.cert_defuncion && <CheckCircle className="text-green-500 absolute top-2 right-2" size={16} />}</label>
-                        <label className={styles.fileBtn}><Upload className="mb-2 text-gray-400" /><span className="text-xs font-bold">Reg. Civil</span><input type="file" accept=".pdf" className="hidden" onChange={(e) => setNovedad({ ...novedad, files: { ...novedad.files, reg_civil: e.target.files[0] } })} />{novedad.files?.reg_civil && <CheckCircle className="text-green-500 absolute top-2 right-2" size={16} />}</label>
+                        {isActive && (
+                          <div className="absolute top-12 left-0 z-50 bg-white p-4 shadow-2xl rounded-2xl border border-gray-100 w-64 animate-bounce-in">
+                            <div className="space-y-3">
+                              <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Días</label>
+                                <input autoFocus type="number" className="w-full border-b-2 border-blue-500 p-1 font-bold outline-none" placeholder="Cant. Días" value={novedad.cantidad} onChange={e => setNovedad({ ...novedad, cantidad: e.target.value })} />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Soportes (Opcional)</label>
+                                <input type="file" accept=".pdf" className="text-[10px] w-full" onChange={e => setNovedad({ ...novedad, files: { ...novedad.files, soporte: e.target.files[0] } })} />
+                                {novedad.files?.soporte && <span className="text-[9px] text-green-600">Archivo cargado</span>}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {['CALAMIDAD_DOMESTICA', 'LICENCIA_NO_REMUNERADA', 'DIA_FAMILIA'].includes(novedad.concepto) && (
-                      <label className={styles.fileBtn}><Upload className="mb-2 text-gray-400" /><span className="text-xs font-bold">Soporte (Opcional)</span><input type="file" accept=".pdf" className="hidden" onChange={(e) => setNovedad({ ...novedad, files: { ...novedad.files, soporte: e.target.files[0] } })} />{novedad.files?.soporte && <CheckCircle className="text-green-500 absolute top-2 right-2" size={16} />}</label>
-                    )}
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
               </div>
+
+
+
 
               <div className="pt-4">
                 <button onClick={() => {
@@ -794,7 +793,7 @@ function App() {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }
 

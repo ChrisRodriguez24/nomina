@@ -5,6 +5,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const { syncDatabase } = require('./syncSheets');
+const { uploadFileToDrive } = require('./googleDrive');
 
 const app = express();
 app.use(cors());
@@ -62,14 +63,38 @@ app.post('/api/nomina', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// 4. RADICAR INCAPACIDAD (MULTIPART)
 app.post('/api/radicar', upload.any(), async (req, res) => {
     try {
         const { contratoId, tipo, fechaInicio, dias, cie10, cie10Desc } = req.body;
-        const archivos = {};
-        req.files.forEach(f => archivos[f.fieldname] = f.filename); // Guardar nombres
 
-        // Calc Fin
+        // 1. Obtener Nombre del Empleado
+        const empRes = await pool.query(`SELECT p.nombre_completo FROM personas p JOIN contratos c ON c.persona_id = p.id WHERE c.id = $1`, [contratoId]);
+        const nombreEmpleado = empRes.rows.length > 0 ? empRes.rows[0].nombre_completo : 'Empleado_Desconocido';
+
+        // 2. Formatear fechas
+        const d = new Date(fechaInicio + 'T12:00:00'); // Evitar desfase
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        const dateStr = `${day}${month}${year}`;
+
+        const archivos = {};
+
+        // 3. Subir archivos a Google Drive con estructura solicitada
+        for (const f of req.files) {
+            const driveName = `${dateStr}-${f.fieldname.toUpperCase()}.pdf`;
+            const driveFile = await uploadFileToDrive({
+                filePath: f.path,
+                fileName: driveName,
+                folders: [tipo, nombreEmpleado, dateStr]
+            });
+            archivos[f.fieldname] = driveFile.id;
+
+            // Limpieza local
+            try { fs.unlinkSync(f.path); } catch (e) { console.error("Error unlinking:", e); }
+        }
+
+        // 4. Calc Fin
         const ini = new Date(fechaInicio);
         const fin = new Date(ini);
         fin.setDate(fin.getDate() + parseInt(dias) - 1);
@@ -78,7 +103,10 @@ app.post('/api/radicar', upload.any(), async (req, res) => {
             [contratoId, tipo, fechaInicio, dias, fin, cie10, cie10Desc, JSON.stringify(archivos)]);
 
         res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+        console.error("Error en radicar:", e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // 5. REPORTES DASHBOARD
