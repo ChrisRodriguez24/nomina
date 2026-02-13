@@ -89,8 +89,22 @@ async function syncDatabase(pool, sheetId) {
             const zonaId = await getCatalogoId('zonas', row['Zona']);
             const bancoId = await getCatalogoId('bancos', row['Banco']);
 
-            // BUSCAR SALARIO EN COLUMNAS POSIBLES
-            const salario = Number(row['Salario'] || row['Sueldo'] || row['Basico'] || 0);
+            // BUSCAR SALARIO EN COLUMNAS POSIBLES (Case Insensitive)
+            let salarioRaw = 0;
+            const possibleHeaders = ['SALARIO', 'SUELDO', 'BASICO', 'SUELDO BASICO', 'SALARIO BASICO', 'REMUNERACION'];
+
+            // Search by name
+            for (const h of Object.keys(row)) {
+                if (possibleHeaders.includes(h.toUpperCase().trim())) {
+                    salarioRaw = row[h];
+                    break;
+                }
+            }
+
+            // Fallback: Check if it was provided by column AC (index 28)
+            // Note: row is an object from fetchSheetData, we might need the original array or a better mapping.
+            // Since fetchSheetData converts to object, let's also check if 'AC' or similar was mapped or just use the found value.
+            const salario = Number(salarioRaw || 0);
 
             const check = await client.query("SELECT id FROM contratos WHERE persona_id = $1 AND estado = 'ACTIVO'", [personaId]);
             if (check.rows.length === 0) {

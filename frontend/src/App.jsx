@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from "jwt-decode";
 import Papa from 'papaparse';
-import { Upload, Search, Calendar, Stethoscope, AlertTriangle, Settings, Plus, Save, Clock, Briefcase, DollarSign, Sun, Moon, Zap, RefreshCw, Banknote, LogOut, CheckCircle, Info, PieChart as PieIcon, TrendingUp, Activity, Users, FileSpreadsheet } from 'lucide-react';
+import { Upload, Search, Calendar, Stethoscope, AlertTriangle, Settings, Plus, Save, Clock, Briefcase, DollarSign, Sun, Moon, Zap, RefreshCw, Banknote, LogOut, CheckCircle, Info, PieChart as PieIcon, TrendingUp, Activity, Users, FileSpreadsheet, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
 const GOOGLE_CLIENT_ID = "258039517489-60eaa7084u6dnjmjrioi4vk4c391o2im.apps.googleusercontent.com";
@@ -65,6 +65,7 @@ function App() {
   const [incapacidad, setIncapacidad] = useState({ cedula: '', nombre: '', contratoId: 0, tipo: '', fechaInicio: '', dias: '', fechaFin: '', cie10: '', cie10Desc: '' });
   const [archivos, setArchivos] = useState({});
   const [legalCheck, setLegalCheck] = useState(false);
+  const [uploadMode, setUploadMode] = useState('MANUAL'); // 'MANUAL' or 'MASIVO'
 
   // INIT
   useEffect(() => {
@@ -94,6 +95,73 @@ function App() {
   };
 
   // LOGICA NÓMINA
+  const downloadTemplate = () => {
+    const headers = ["Cedula", "Concepto", "Cantidad", "Valor", "Fecha"];
+    const examples = [
+      ["12345678", "HED", "5", "0", new Date().toISOString().split('T')[0]],
+      ["12345678", "BONO", "0", "150000", new Date().toISOString().split('T')[0]],
+      ["12345678", "LICENCIA_LUTO", "5", "0", new Date().toISOString().split('T')[0]]
+    ];
+    const csvContent = [headers, ...examples].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", "plantilla_novedades_masivas.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleMassiveUpload = (file) => {
+    if (!file) return;
+    setLoading(true);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const newItems = [];
+        for (const row of results.data) {
+          try {
+            const res = await fetch(`/api/empleados/${row.Cedula}`);
+            if (res.ok) {
+              const emp = await res.json();
+              const concepto = row.Concepto.toUpperCase().trim();
+              let valorFinal = Number(row.Valor || 0);
+              const cantidad = Number(row.Cantidad || 0);
+
+              const isAusentismo = ['LICENCIA_LUTO', 'CALAMIDAD_DOMESTICA', 'LICENCIA_NO_REMUNERADA', 'DIA_FAMILIA'].includes(concepto);
+
+              if (!isAusentismo && valorFinal === 0 && cantidad > 0) {
+                const conf = configDB.find(c => c.codigo === concepto) || { porcentaje: 0 };
+                const factor = 1 + (Number(conf.porcentaje) / 100);
+                valorFinal = Math.round((Number(emp.salario) / 240) * factor * cantidad);
+              }
+
+              newItems.push({
+                cedula: row.Cedula,
+                nombre: emp.nombre_completo,
+                contratoId: emp.contrato_id,
+                salario: Number(emp.salario),
+                concepto: concepto,
+                cantidad: row.Cantidad,
+                valor: valorFinal,
+                unidad: isAusentismo ? 'DIAS' : (valorFinal > 0 && cantidad === 0 ? 'DINERO' : 'HORAS'),
+                fecha: row.Fecha || new Date().toISOString().split('T')[0],
+                isAusentismo: isAusentismo,
+                id_temp: Date.now() + Math.random()
+              });
+            }
+          } catch (e) {
+            console.error("Error procesando fila:", row, e);
+          }
+        }
+        setNovedadesCart([...novedadesCart, ...newItems]);
+        setLoading(false);
+        alert(`✅ Se procesaron ${newItems.length} novedades correctamente.`);
+      }
+    });
+  };
+
   // LOGICA NÓMINA (CARRITO)
   const agregarAlCarrito = () => {
     if (!novedad.contratoId) return alert("⚠️ Busque empleado.");
@@ -288,14 +356,41 @@ function App() {
           <div className="grid lg:grid-cols-12 gap-6 animate-fade-in">
             <div className={`${styles.glass} p-6 lg:col-span-8 h-fit space-y-8`}>
 
-              {/* HEADER SEARCH */}
-              <div>
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Clock /> Registrar Novedad</h3>
-                <div className="flex gap-2 mb-4">
-                  <input className="flex-1 border rounded-xl p-3 font-bold" placeholder="Cédula..." value={novedad.cedula} onChange={e => setNovedad({ ...novedad, cedula: e.target.value })} />
-                  <button onClick={() => buscarEmpleado(novedad.cedula, 'NOMINA')} className="bg-blue-900 text-white px-6 rounded-xl font-bold"><Search /></button>
+              {/* HEADER SEARCH & TOGGLE */}
+              <div className="flex flex-col gap-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold flex items-center gap-2"><Clock /> Registrar Novedad</h3>
+                  <div className="flex bg-gray-100 p-1 rounded-xl">
+                    <button onClick={() => setUploadMode('MANUAL')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${uploadMode === 'MANUAL' ? 'bg-white shadow text-blue-900' : 'text-gray-500'}`}>INDIVIDUAL</button>
+                    <button onClick={() => setUploadMode('MASIVO')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${uploadMode === 'MASIVO' ? 'bg-white shadow text-blue-900' : 'text-gray-500'}`}>CARGA MASIVA</button>
+                  </div>
                 </div>
-                {novedad.nombre && <div className="p-3 bg-blue-50 rounded-lg font-bold flex justify-between"><span>{novedad.nombre}</span><span>Salario: ${novedad.salario.toLocaleString()}</span></div>}
+
+                {uploadMode === 'MANUAL' ? (
+                  <>
+                    <div className="flex gap-2">
+                      <input className="flex-1 border rounded-xl p-3 font-bold" placeholder="Cédula..." value={novedad.cedula} onChange={e => setNovedad({ ...novedad, cedula: e.target.value })} />
+                      <button onClick={() => buscarEmpleado(novedad.cedula, 'NOMINA')} className="bg-blue-900 text-white px-6 rounded-xl font-bold"><Search /></button>
+                    </div>
+                    {novedad.nombre && <div className="p-3 bg-blue-50 rounded-lg font-bold flex justify-between"><span>{novedad.nombre}</span><span>Salario: ${novedad.salario.toLocaleString()}</span></div>}
+                  </>
+                ) : (
+                  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-center">
+                    <div className="mb-4">
+                      <h4 className="font-bold text-blue-900 mb-1">Carga Masiva de Novedades</h4>
+                      <p className="text-xs text-blue-700">Suba un archivo CSV con las novedades de varios empleados a la vez.</p>
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
+                      <button onClick={downloadTemplate} className="flex items-center gap-2 bg-white text-blue-900 border border-blue-200 px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-100 transition-all">
+                        <Download size={18} /> Descargar Plantilla
+                      </button>
+                      <label className="flex items-center gap-2 bg-blue-900 text-white px-6 py-3 rounded-xl font-bold text-sm cursor-pointer hover:bg-blue-800 transition-all">
+                        <Upload size={18} /> {loading ? 'Procesando...' : 'Subir Archivo CSV'}
+                        <input type="file" accept=".csv" className="hidden" onChange={(e) => handleMassiveUpload(e.target.files[0])} disabled={loading} />
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* SEGMENT 1: RECARGOS */}
