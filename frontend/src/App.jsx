@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from "jwt-decode";
 import Papa from 'papaparse';
-import { Upload, Search, Calendar, Stethoscope, AlertTriangle, Settings, Plus, Save, Clock, Briefcase, DollarSign, Sun, Moon, Zap, RefreshCw, Banknote, LogOut, CheckCircle, Info, PieChart as PieIcon, TrendingUp, Activity, Users, FileSpreadsheet, Download } from 'lucide-react';
+import { Upload, Search, Calendar, Stethoscope, AlertTriangle, Settings, Plus, Save, Clock, Briefcase, DollarSign, Sun, Moon, Zap, RefreshCw, Banknote, LogOut, CheckCircle, Info, PieChart as PieIcon, TrendingUp, Activity, Users, FileSpreadsheet, Download, HelpCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 const GOOGLE_CLIENT_ID = "258039517489-60eaa7084u6dnjmjrioi4vk4c391o2im.apps.googleusercontent.com";
 const CSV_PATH = "/cie10.csv";
@@ -11,12 +13,14 @@ const ADMIN_EMAILS = ["crodriguezm@alocredit.co", "direccion.administrativa@aloc
 
 // CONCEPTOS VISUALES MEJORADOS
 const VISUAL_CONCEPTOS = {
+  'RN': { icon: <Moon className="text-blue-600" size={24} />, bg: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200', title: 'text-blue-900', pct: 'bg-blue-200 text-blue-800' },
   'HED': { icon: <Sun className="text-yellow-600" size={24} />, bg: 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200', title: 'text-yellow-900', pct: 'bg-yellow-200 text-yellow-800' },
   'HEN': { icon: <Moon className="text-indigo-600" size={24} />, bg: 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200', title: 'text-indigo-900', pct: 'bg-indigo-200 text-indigo-800' },
-  'HEDDF': { icon: <Zap className="text-orange-600" size={24} />, bg: 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200', title: 'text-orange-900', pct: 'bg-orange-200 text-orange-800' },
-  'HENDF': { icon: <Zap className="text-red-600" size={24} />, bg: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200', title: 'text-red-900', pct: 'bg-red-200 text-red-800' },
-  'RN': { icon: <Moon className="text-blue-600" size={24} />, bg: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200', title: 'text-blue-900', pct: 'bg-blue-200 text-blue-800' },
-  'RNDF': { icon: <Zap className="text-purple-600" size={24} />, bg: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200', title: 'text-purple-900', pct: 'bg-purple-200 text-purple-800' }
+  'FSC': { icon: <Calendar className="text-orange-600" size={24} />, bg: 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200', title: 'text-orange-900', pct: 'bg-orange-200 text-orange-800' },
+  'FCC': { icon: <Calendar className="text-emerald-600" size={24} />, bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200', title: 'text-emerald-900', pct: 'bg-emerald-200 text-emerald-800' },
+  'RNF': { icon: <Moon className="text-purple-600" size={24} />, bg: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200', title: 'text-purple-900', pct: 'bg-purple-200 text-purple-800' },
+  'FD': { icon: <Sun className="text-red-600" size={24} />, bg: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200', title: 'text-red-900', pct: 'bg-red-200 text-red-800' },
+  'FN': { icon: <Moon className="text-rose-600" size={24} />, bg: 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200', title: 'text-rose-900', pct: 'bg-rose-200 text-rose-800' }
 };
 
 const LEGAL_TEXT = "Autorizo de manera voluntaria, previa explícita e informada a Alo Credit Colombia SAS para tratar mis datos personales de acuerdo con la política de Tratamiento de Datos personales para los fines relacionados con su objeto y en especial para fines legales, contractuales y misionales. Así mismo acepto la política de incapacidades vigente por la compañía. (Ver política)";
@@ -95,21 +99,34 @@ function App() {
   };
 
   // LOGICA NÓMINA
-  const downloadTemplate = () => {
-    const headers = ["Cedula", "Concepto", "Cantidad", "Valor", "Fecha"];
-    const examples = [
-      ["12345678", "HED", "5", "0", new Date().toISOString().split('T')[0]],
-      ["12345678", "BONO", "0", "150000", new Date().toISOString().split('T')[0]],
-      ["12345678", "LICENCIA_LUTO", "5", "0", new Date().toISOString().split('T')[0]]
+  const downloadTemplate = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Novedades');
+
+    sheet.columns = [
+      { header: 'Cedula', key: 'cedula', width: 15 },
+      { header: 'Concepto', key: 'concepto', width: 15 },
+      { header: 'Cantidad', key: 'cantidad', width: 10 },
+      { header: 'Valor', key: 'valor', width: 15 },
+      { header: 'Fecha', key: 'fecha', width: 15 }
     ];
-    const csvContent = [headers, ...examples].map(e => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", "plantilla_novedades_masivas.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    sheet.addRow(['12345678', 'HED', '5', '0', new Date().toISOString().split('T')[0]]);
+    sheet.addRow(['12345678', 'BONO', '0', '150000', new Date().toISOString().split('T')[0]]);
+    sheet.addRow(['12345678', 'RN', '10', '0', new Date().toISOString().split('T')[0]]);
+
+    // Estilos
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+
+    // Add reference sheet
+    const refSheet = workbook.addWorksheet('Conceptos_Validos');
+    refSheet.columns = [{ header: 'Código', key: 'c', width: 10 }, { header: 'Nombre', key: 'n', width: 30 }, { header: 'Porcentaje', key: 'p', width: 10 }];
+    configDB.forEach(c => refSheet.addRow([c.codigo, c.nombre, c.porcentaje + '%']));
+    ['LICENCIA_LUTO', 'CALAMIDAD_DOMESTICA', 'LICENCIA_NO_REMUNERADA', 'DIA_FAMILIA', 'BONO', 'COMISION'].forEach(a => refSheet.addRow([a, a.replace('_', ' '), 'N/A']));
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), 'Plantilla_Masiva_Novedades.xlsx');
   };
 
   const handleMassiveUpload = (file) => {
@@ -378,16 +395,40 @@ function App() {
                   <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-center">
                     <div className="mb-4">
                       <h4 className="font-bold text-blue-900 mb-1">Carga Masiva de Novedades</h4>
-                      <p className="text-xs text-blue-700">Suba un archivo CSV con las novedades de varios empleados a la vez.</p>
+                      <p className="text-xs text-blue-700">Suba un archivo EXCEL con las novedades de varios empleados a la vez.</p>
                     </div>
                     <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
                       <button onClick={downloadTemplate} className="flex items-center gap-2 bg-white text-blue-900 border border-blue-200 px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-100 transition-all">
-                        <Download size={18} /> Descargar Plantilla
+                        <Download size={18} /> Descargar Plantilla (.xlsx)
                       </button>
                       <label className="flex items-center gap-2 bg-blue-900 text-white px-6 py-3 rounded-xl font-bold text-sm cursor-pointer hover:bg-blue-800 transition-all">
-                        <Upload size={18} /> {loading ? 'Procesando...' : 'Subir Archivo CSV'}
-                        <input type="file" accept=".csv" className="hidden" onChange={(e) => handleMassiveUpload(e.target.files[0])} disabled={loading} />
+                        <Upload size={18} /> {loading ? 'Procesando...' : 'Subir Excel'}
+                        <input type="file" accept=".xlsx, .xls" className="hidden" onChange={(e) => handleMassiveUpload(e.target.files[0])} disabled={loading} />
                       </label>
+
+                      <div className="relative group">
+                        <button className="flex items-center gap-2 text-blue-600 font-bold text-xs hover:text-blue-800 transition-colors">
+                          <HelpCircle size={14} /> Conceptos Válidos
+                        </button>
+                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-64 bg-white shadow-2xl rounded-xl p-4 border border-gray-100 hidden group-hover:block z-50 animate-fade-in pointer-events-none">
+                          <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase">Recargos (Usar estos códigos):</p>
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                            {configDB.map(c => <div key={c.codigo} className="text-[10px]"><span className="font-bold text-blue-900">{c.codigo}:</span> {c.porcentaje}%</div>)}
+                            <div className="text-[10px]"><span className="font-bold text-blue-900">BONO:</span> No Salarial</div>
+                            <div className="text-[10px]"><span className="font-bold text-blue-900">COMISION:</span> Variable</div>
+                          </div>
+                          <p className="text-[10px] font-bold text-gray-400 mt-3 mb-2 uppercase">Ausentismos:</p>
+                          <div className="text-[10px] space-y-1">
+                            <div>LICENCIA_LUTO</div>
+                            <div>CALAMIDAD_DOMESTICA</div>
+                            <div>LICENCIA_NO_REMUNERADA</div>
+                            <div>DIA_FAMILIA</div>
+                          </div>
+                          <div className="mt-3 pt-2 border-t text-[9px] text-gray-400 italic">
+                            * El sistema calculará el valor automáticamente si deja la columna "Valor" en 0.
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
