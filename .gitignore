@@ -4,8 +4,6 @@ dist/
 build/
 
 # Environment and secrets
-.env
-google-credentials.json
 *.key
 *.pem
 
