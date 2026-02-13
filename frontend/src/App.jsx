@@ -70,6 +70,7 @@ function App() {
   const [archivos, setArchivos] = useState({});
   const [legalCheck, setLegalCheck] = useState(false);
   const [uploadMode, setUploadMode] = useState('MANUAL'); // 'MANUAL' or 'MASIVO'
+  const [uploadResults, setUploadResults] = useState(null); // Feedback for massive upload
 
   // INIT
   useEffect(() => {
@@ -129,54 +130,96 @@ function App() {
     saveAs(new Blob([buffer]), 'Plantilla_Masiva_Novedades.xlsx');
   };
 
-  const handleMassiveUpload = (file) => {
+  const handleMassiveUpload = async (file) => {
     if (!file) return;
     setLoading(true);
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        const newItems = [];
-        for (const row of results.data) {
-          try {
-            const res = await fetch(`/api/empleados/${row.Cedula}`);
-            if (res.ok) {
-              const emp = await res.json();
-              const concepto = row.Concepto.toUpperCase().trim();
-              let valorFinal = Number(row.Valor || 0);
-              const cantidad = Number(row.Cantidad || 0);
+    const results = { total: 0, success: 0, errors: [] };
 
-              const isAusentismo = ['LICENCIA_LUTO', 'CALAMIDAD_DOMESTICA', 'LICENCIA_NO_REMUNERADA', 'DIA_FAMILIA'].includes(concepto);
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const arrayBuffer = await file.arrayBuffer();
+      await workbook.xlsx.load(arrayBuffer);
+      const sheet = workbook.getWorksheet(1);
 
-              if (!isAusentismo && valorFinal === 0 && cantidad > 0) {
-                const conf = configDB.find(c => c.codigo === concepto) || { porcentaje: 0 };
-                const factor = 1 + (Number(conf.porcentaje) / 100);
-                valorFinal = Math.round((Number(emp.salario) / 240) * factor * cantidad);
-              }
+      const newItems = [];
+      const rows = [];
 
-              newItems.push({
-                cedula: row.Cedula,
-                nombre: emp.nombre_completo,
-                contratoId: emp.contrato_id,
-                salario: Number(emp.salario),
-                concepto: concepto,
-                cantidad: row.Cantidad,
-                valor: valorFinal,
-                unidad: isAusentismo ? 'DIAS' : (valorFinal > 0 && cantidad === 0 ? 'DINERO' : 'HORAS'),
-                fecha: row.Fecha || new Date().toISOString().split('T')[0],
-                isAusentismo: isAusentismo,
-                id_temp: Date.now() + Math.random()
-              });
-            }
-          } catch (e) {
-            console.error("Error procesando fila:", row, e);
+      sheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          const cedulaRaw = row.getCell(1).value;
+          const conceptoRaw = row.getCell(2).value;
+          const cantidadRaw = row.getCell(3).value;
+          const valorRaw = row.getCell(4).value;
+          const fechaRaw = row.getCell(5).value;
+
+          if (cedulaRaw && conceptoRaw) {
+            rows.push({
+              cedula: cedulaRaw.toString().trim(),
+              concepto: conceptoRaw.toString().trim().toUpperCase(),
+              cantidad: Number(cantidadRaw || 0),
+              valor: Number(valorRaw || 0),
+              fecha: fechaRaw ? (typeof fechaRaw === 'object' ? fechaRaw.toISOString().split('T')[0] : fechaRaw.toString()) : null
+            });
           }
         }
-        setNovedadesCart([...novedadesCart, ...newItems]);
-        setLoading(false);
-        alert(`✅ Se procesaron ${newItems.length} novedades correctamente.`);
+      });
+
+      results.total = rows.length;
+
+      for (const row of rows) {
+        try {
+          const res = await fetch(`/api/empleados/${row.cedula}`);
+          if (!res.ok) {
+            results.errors.push({ row: row.cedula, msg: `Cédula ${row.cedula} no encontrada o inactiva.` });
+            continue;
+          }
+
+          const emp = await res.json();
+          const concepto = row.concepto;
+          let valorFinal = row.valor;
+          const cantidad = row.cantidad;
+
+          const isAusentismo = ['LICENCIA_LUTO', 'CALAMIDAD_DOMESTICA', 'LICENCIA_NO_REMUNERADA', 'DIA_FAMILIA', 'PERMISO_REMUNERADO', 'VACACIONES'].includes(concepto);
+
+          if (!isAusentismo && valorFinal === 0 && cantidad > 0) {
+            const conf = configDB.find(c => c.codigo === concepto);
+            if (conf) {
+              const factor = (Number(conf.porcentaje) / 100);
+              valorFinal = Math.round((Number(emp.salario) / 240) * factor * cantidad);
+            } else if (concepto !== 'BONO' && concepto !== 'COMISION') {
+              results.errors.push({ row: row.cedula, msg: `Concepto '${concepto}' no configurado.` });
+              continue;
+            }
+          }
+
+          newItems.push({
+            cedula: row.cedula,
+            nombre: emp.nombre_completo,
+            contratoId: emp.contrato_id,
+            salario: Number(emp.salario),
+            concepto: concepto,
+            cantidad: cantidad,
+            valor: valorFinal,
+            unidad: isAusentismo ? 'DIAS' : (valorFinal > 0 && cantidad === 0 ? 'DINERO' : 'HORAS'),
+            fecha: row.fecha || new Date().toISOString().split('T')[0],
+            isAusentismo: isAusentismo,
+            id_temp: Date.now() + Math.random()
+          });
+          results.success++;
+
+        } catch (e) {
+          results.errors.push({ row: row.cedula, msg: `Error técnico en fila.` });
+        }
       }
-    });
+
+      if (newItems.length > 0) setNovedadesCart(prev => [...prev, ...newItems]);
+      setUploadResults(results);
+
+    } catch (e) {
+      console.error(e);
+      alert("Error leyendo el archivo. Asegúrese de que sea un .xlsx válido.");
+    }
+    setLoading(false);
   };
 
   // LOGICA NÓMINA (CARRITO)
@@ -186,7 +229,7 @@ function App() {
     let valorFinal = novedad.valor;
     if (novedad.unidad === 'HORAS') {
       const conf = configDB.find(c => c.codigo === novedad.concepto) || { porcentaje: 0 };
-      const factor = 1 + (Number(conf.porcentaje) / 100);
+      const factor = (Number(conf.porcentaje) / 100);
       valorFinal = Math.round((novedad.salario / 240) * factor * Number(novedad.cantidad));
     }
     const item = { ...novedad, valor: valorFinal, id_temp: Date.now() };
@@ -410,24 +453,27 @@ function App() {
                         <button className="flex items-center gap-2 text-blue-600 font-bold text-xs hover:text-blue-800 transition-colors">
                           <HelpCircle size={14} /> Conceptos Válidos
                         </button>
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-80 mt-4 bg-white shadow-2xl rounded-2xl p-5 border border-gray-100 hidden group-hover:block z-[9999] animate-fade-in pointer-events-auto">
-                          <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase">Recargos (Usar estos códigos):</p>
-                          <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                            {configDB.map(c => <div key={c.codigo} className="text-[10px]"><span className="font-bold text-blue-900">{c.codigo}:</span> {c.porcentaje}%</div>)}
-                            <div className="text-[10px]"><span className="font-bold text-blue-900">BONO:</span> No Salarial</div>
-                            <div className="text-[10px]"><span className="font-bold text-blue-900">COMISION:</span> Variable</div>
-                          </div>
-                          <p className="text-[10px] font-bold text-gray-400 mt-3 mb-2 uppercase">Ausentismos:</p>
-                          <div className="text-[10px] space-y-1">
-                            <div>LICENCIA_LUTO</div>
-                            <div>CALAMIDAD_DOMESTICA</div>
-                            <div>LICENCIA_NO_REMUNERADA</div>
-                            <div>DIA_FAMILIA</div>
-                            <div>PERMISO_REMUNERADO</div>
-                            <div>VACACIONES</div>
-                          </div>
-                          <div className="mt-3 pt-2 border-t text-[9px] text-gray-400 italic">
-                            * El sistema calculará el valor automáticamente si deja la columna "Valor" en 0.
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-80 mt-4 bg-white shadow-2xl rounded-2xl p-6 border border-gray-100 hidden group-hover:block z-[9999] animate-fade-in pointer-events-auto">
+                          <p className="text-[10px] font-bold text-gray-400 mb-3 uppercase tracking-widest text-center">Guía de Conceptos</p>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-2">
+                              {configDB.map(c => (
+                                <div key={c.codigo} className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                  <span className="font-bold text-blue-900 text-[10px]">{c.codigo}</span>
+                                  <span className="text-[9px] text-gray-500">{c.porcentaje}%</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="pt-2 border-t text-center">
+                              <p className="text-[10px] text-gray-400 mb-2 uppercase">Otros:</p>
+                              <div className="flex gap-2 justify-center">
+                                <span className="bg-green-50 text-green-700 px-2 py-1 rounded text-[9px] font-bold">BONO</span>
+                                <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-[9px] font-bold">COMISION</span>
+                              </div>
+                            </div>
+                            <div className="text-[9px] text-gray-400 italic leading-tight text-center">
+                              * Tip: Deje la columna "Valor" en 0 para que el sistema calcule el monto según el porcentaje.
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -792,8 +838,57 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* MODAL RESULTADOS CARGA MASIVA */}
+        {uploadResults && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in text-left">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in">
+              <div className="p-6 bg-blue-900 text-white flex justify-between items-center">
+                <h3 className="font-bold text-lg flex items-center gap-2"><Activity size={20} /> Resultado de Carga</h3>
+                <button onClick={() => setUploadResults(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><LogOut size={20} /></button>
+              </div>
+              <div className="p-8">
+                <div className="flex gap-4 mb-8">
+                  <div className="flex-1 bg-blue-50 p-4 rounded-2xl text-center border border-blue-100">
+                    <p className="text-2xl font-black text-blue-900">{uploadResults.total}</p>
+                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Filas Leídas</p>
+                  </div>
+                  <div className="flex-1 bg-green-50 p-4 rounded-2xl text-center border border-green-100">
+                    <p className="text-2xl font-black text-green-700">{uploadResults.success}</p>
+                    <p className="text-[10px] font-bold text-green-500 uppercase tracking-widest">Exitosa</p>
+                  </div>
+                  <div className="flex-1 bg-red-50 p-4 rounded-2xl text-center border border-red-100">
+                    <p className="text-2xl font-black text-red-700">{uploadResults.errors.length}</p>
+                    <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Con Fallas</p>
+                  </div>
+                </div>
+
+                {uploadResults.errors.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Detalle de Errores:</p>
+                    <div className="max-h-48 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                      {uploadResults.errors.map((err, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
+                          <AlertTriangle className="text-red-500 shrink-0" size={16} />
+                          <div className="flex-1">
+                            <p className="text-[11px] font-bold text-red-900">IDENTIFICACIÓN: {err.row}</p>
+                            <p className="text-[10px] text-red-700 opacity-80">{err.msg}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button onClick={() => setUploadResults(null)} className="w-full mt-8 bg-blue-900 hover:bg-blue-800 text-white font-bold py-4 rounded-2xl transition-all uppercase tracking-widest text-xs shadow-lg">
+                  Cerrar Ventana
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </div >
+    </div>
   );
 }
 
