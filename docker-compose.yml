@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # 1. Base de Datos PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: nomina_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: nomina_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - nomina-net
+
+  # 2. Backend API (Sincronizador Sheets)
+  api:
+    build: ./backend
+    container_name: nomina_api
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://admin:password123@db:5432/nomina_db
+      SHEET_ID: "1e_FZijeir7BNFNw1UGX6IYRSRHd-kdAKQOxik0k4oVI"
+    volumes:
+      - ./backend/google-credentials.json:/app/google-credentials.json
+    ports:
+      - "3000:3000"
+    networks:
+      - nomina-net
+
+  # 3. Frontend (Nginx + React)
+  web:
+    build: ./frontend
+    container_name: nomina_web
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - nomina-net
+
+volumes:
+  postgres_data:
+
+networks:
+  nomina-net:
+    driver: bridge

@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Environment and secrets
+.env
+google-credentials.json
+*.key
+*.pem
+
+# Uploads and temporary files
+uploads/
+temp/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
