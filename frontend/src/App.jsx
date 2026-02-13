@@ -357,7 +357,7 @@ function App() {
               {/* SEGMENT 3: AUSENTISMOS */}
               <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
                 <h4 className="text-sm font-bold text-gray-500 uppercase mb-4 flex items-center gap-2"><Briefcase size={16} /> 3. Reporte de Ausentismo & Permisos</h4>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                   <div>
                     <label className={styles.label}>Tipo de Ausencia</label>
                     <select className={styles.input} value={novedad.isAusentismo ? novedad.concepto : ''} onChange={e => setNovedad({ ...novedad, concepto: e.target.value, isAusentismo: true, unidad: 'DIAS', cantidad: '', files: null })}>
@@ -369,10 +369,16 @@ function App() {
                     </select>
                   </div>
                   {novedad.isAusentismo && (
-                    <div>
-                      <label className={styles.label}>Días de Ausencia</label>
-                      <input type="number" className={styles.input} placeholder="Días..." value={novedad.cantidad} onChange={e => setNovedad({ ...novedad, cantidad: e.target.value })} />
-                    </div>
+                    <>
+                      <div>
+                        <label className={styles.label}>Fecha Inicio</label>
+                        <input type="date" className={styles.input} value={novedad.fecha} onChange={e => setNovedad({ ...novedad, fecha: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className={styles.label}>Días de Ausencia</label>
+                        <input type="number" className={styles.input} placeholder="Días..." value={novedad.cantidad} onChange={e => setNovedad({ ...novedad, cantidad: e.target.value })} />
+                      </div>
+                    </>
                   )}
                 </div>
 
@@ -428,7 +434,7 @@ function App() {
                         <p className="text-[10px] text-gray-500 font-medium">
                           {item.concepto} <br />
                           {item.isAusentismo ? (
-                            <span className="text-blue-600 font-bold">{item.cantidad} Días {item.files ? '(+Soportes)' : ''}</span>
+                            <span className="text-blue-600 font-bold">{item.fecha} | {item.cantidad} Días {item.files ? '(+Soportes)' : ''}</span>
                           ) : (
                             <span>{item.unidad === 'HORAS' ? `${item.cantidad} Hrs` : `$${Number(item.valor).toLocaleString()}`}</span>
                           )}
